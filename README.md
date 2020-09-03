@@ -12,12 +12,15 @@ Search for .gpX (GuitarPro tablature) files from the terminal
 
 ### TODO
 
-- programmatic retrieval of .gpX files (only search is implemented currently)
+- programmatic retrieval of .gpX files (if possible from specified source)
   - open files directly in GuitarPro / TuxGuitar
-- scrape from additional source websites?
+- scrape from additional source websites
+  - cache queries, not webpage contents
+  - multi-thread downloads
 - sort parameters (eg. sort by number of downloads/only version X)
-- make copy to clipboard optional
-- option to auto-select most downloaded
+- arg handling
+  - make copy to clipboard optional
+  - option to auto-select most downloaded?
 
 
 ### DONE
