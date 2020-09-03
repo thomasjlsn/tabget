@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""
+Search for .gpX files on guitarprotabs.com.
+"""
+
+import os
+import pickle
+import readline
+from platform import system as OS
+from sys import argv, stderr
+
+from bs4 import BeautifulSoup
+from requests import get
+
+HOME = os.getenv('HOME')
+
+CACHE_PATH = f'{HOME}/.cache/tabget'
+
+if not os.path.isdir(CACHE_PATH):
+    os.makedirs(CACHE_PATH)
+
+QUERY = ' '.join(argv[1:])
+QUERY_STRING = '+'.join(argv[1:])
+
+if QUERY_STRING == '':
+    stderr.write('please specify the name of a song\n')
+    exit(1)
+
+CACHE = '/'.join([CACHE_PATH, f'{QUERY_STRING}.pickle'])
+
+URL = 'https://guitarprotabs.org'
+
+if not os.path.exists(CACHE):
+    url = f'{URL}/search.php?search={QUERY_STRING}&in=songs&page=1'
+    response = get(url)
+    with open(CACHE, 'wb') as p:
+        pickle.dump(response, p)
+else:
+    with open(CACHE, 'rb') as p:
+        response = pickle.load(p)
+
+soup = BeautifulSoup(response.text, features='lxml')
+
+result_table = soup.find('tbody')
+
+results = []
+
+for row in result_table.find_all('tr'):
+    result_data = row.find_all('td')
+    try:
+        results.append({
+            'name':      result_data[0].text,
+            'link':      result_data[0].a['href'],
+            'artist':    result_data[1].text,
+            'version':   result_data[2].text,
+            'downloads': result_data[3].text,
+        })
+    except (IndexError, TypeError):
+        # Advertisements
+        continue
+
+if len(results) == 0:
+    stderr.write('No results for query "{QUERY}"\n')
+    exit(1)
+
+TABSTOP = 8
+MAX = 30
+
+for index, result in enumerate(results):
+    for key, entry in result.items():
+        if entry.startswith('http'):
+            # Link length does not matter
+            continue
+        if len(entry) > MAX:
+            results[index][key] = f'{entry[0:MAX-4]}... '
+            TABSTOP = MAX
+            continue
+        if len(entry) > TABSTOP:
+            TABSTOP = len(entry)
+
+print(f'Results for query "{QUERY}"\n')
+
+print('       {}  {}  {}  {}'.format(
+    'SONG'.ljust(TABSTOP),
+    'ARTIST'.ljust(TABSTOP),
+    'VERSION'.ljust(TABSTOP),
+    'DOWNLOADS'.ljust(TABSTOP),
+))
+
+print('  ==' + ('=' * ((TABSTOP + 2) * 4)))
+
+for index, result in enumerate(results):
+    print('  {}  {}  {}  {}  {}'.format(
+        f'{index})'.rjust(3),
+        result["name"].ljust(TABSTOP),
+        result["artist"].ljust(TABSTOP),
+        result["version"].ljust(TABSTOP),
+        result["downloads"].ljust(TABSTOP),
+    ))
+
+if len(results) > 1:
+    try:
+        answer = input(f'\nChoice? [0-{int(len(results))-1}] ')
+    except KeyboardInterrupt:
+        print()
+        exit(1)
+else:
+    answer = 0
+
+try:
+    download_link = results[int(answer)]["link"].strip()
+except (IndexError, TypeError, ValueError):
+    exit(1)
+
+if os.isatty(0):
+    print('\n\033[31mNOTE\033[0m: Programmatic retrieval of files has not yet been implemented, you will need to fetch if via a web browser. The download link has been copied to your clipboard')
+
+os.system({
+    'Darwin':  f'echo "{download_link}" | pbcopy',
+    'Linux':   f'echo "{download_link}" | xsel --clipboard',
+    'Windows': f'echo {download_link}| clip',
+}[OS()])
+
+print(f'\n{download_link}\n')
