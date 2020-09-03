@@ -45,22 +45,26 @@ result_table = soup.find('tbody')
 
 results = []
 
-for row in result_table.find_all('tr'):
-    result_data = row.find_all('td')
-    try:
-        results.append({
-            'name':      result_data[0].text,
-            'link':      result_data[0].a['href'],
-            'artist':    result_data[1].text,
-            'version':   result_data[2].text,
-            'downloads': result_data[3].text,
-        })
-    except (IndexError, TypeError):
-        # Advertisements
-        continue
+try:
+    for row in result_table.find_all('tr'):
+        result_data = row.find_all('td')
+        try:
+            results.append({
+                'name':      result_data[0].text,
+                'link':      result_data[0].a['href'],
+                'artist':    result_data[1].text,
+                'version':   result_data[2].text,
+                'downloads': result_data[3].text,
+            })
+        except (IndexError, TypeError):
+            # Advertisements
+            continue
+except (AttributeError, ValueError):
+    stderr.write(f'No results for query "{QUERY}"\n')
+    exit(1)
 
 if len(results) == 0:
-    stderr.write('No results for query "{QUERY}"\n')
+    stderr.write(f'No results for query "{QUERY}"\n')
     exit(1)
 
 TABSTOP = 8
