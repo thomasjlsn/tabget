@@ -50,7 +50,7 @@ try:
         result_data = row.find_all('td')
         try:
             results.append({
-                'name':      result_data[0].text,
+                'song':      result_data[0].text,
                 'link':      result_data[0].a['href'],
                 'artist':    result_data[1].text,
                 'version':   result_data[2].text,
@@ -68,7 +68,8 @@ if len(results) == 0:
     exit(1)
 
 TABSTOP = 8
-MAX = 30
+TERMWIDTH, _ = os.get_terminal_size()
+MAX = int((int(TERMWIDTH) * 0.75) / 4)
 
 for index, result in enumerate(results):
     for key, entry in result.items():
@@ -76,7 +77,7 @@ for index, result in enumerate(results):
             # Link length does not matter
             continue
         if len(entry) > MAX:
-            results[index][key] = f'{entry[0:MAX-4]}... '
+            results[index][key] = f'{entry[0:MAX-1]}…'
             TABSTOP = MAX
             continue
         if len(entry) > TABSTOP:
@@ -84,7 +85,7 @@ for index, result in enumerate(results):
 
 print(f'Results for query "{QUERY}"\n')
 
-print('       {}  {}  {}  {}'.format(
+print('\033[1m        {}  {}  {}  {}\033[0m'.format(
     'SONG'.ljust(TABSTOP),
     'ARTIST'.ljust(TABSTOP),
     'VERSION'.ljust(TABSTOP),
@@ -94,9 +95,9 @@ print('       {}  {}  {}  {}'.format(
 print('  ==' + ('=' * ((TABSTOP + 2) * 4)))
 
 for index, result in enumerate(results):
-    print('  {}  {}  {}  {}  {}'.format(
-        f'{index})'.rjust(3),
-        result["name"].ljust(TABSTOP),
+    print('  {} | {}  {}  {}  {}'.format(
+        f'{index}'.rjust(3),
+        result["song"].ljust(TABSTOP),
         result["artist"].ljust(TABSTOP),
         result["version"].ljust(TABSTOP),
         result["downloads"].ljust(TABSTOP),
@@ -113,7 +114,8 @@ else:
 
 try:
     download_link = results[int(answer)]["link"].strip()
-except (IndexError, TypeError, ValueError):
+except ValueError:
+    # TODO new query if not int or quit/exit
     exit(1)
 
 if os.isatty(0):
